@@ -1,0 +1,722 @@
+* 
+** 问题
+   - null 跟 NULL 都可以， null没有值， 没有重复的问题
+** DQL
+*** 注意
+**** 如果没有默认字符， 创建数据库的时候记得加入
+     #+BEGIN_SRC sql
+     create database 数据库名 character set utf8;
+     #+END_SRC
+*** 使用 比较运算符 和 逻辑运算符 进行条件查询
+**** 准备数据
+     #+BEGIN_SRC sql
+     create database day14;
+     use day14;
+     create table student (
+     id int, 
+     name varchar(20), 
+     age int, 
+     sex varchar(5), 
+     address varchar(100), 
+     math int, 
+     english int
+     );
+
+     INSERT INTO student(id,name,age,sex,address,math,english) VALUES 
+     (1,'马云',55,'男','杭州',66,78),
+     (2,'马化腾',45,'女','深圳',98,87),
+     (3,'马景涛',55,'男','香港',56,77),
+     (4,'柳岩',20,'女','湖南',76,65),
+     (5,'柳青',20,'男','湖南',86,NULL),
+     (6,'刘德华',57,'男','香港',99,99),
+     (7,'马德',22,'女','香港',99,99),
+     (8,'德玛西亚',18,'男','南京',56,65);
+     #+END_SRC
+
+*** 比较运算符
+**** 比较运算符
+     #+BEGIN_SRC sql
+     >			大于 
+     <			小于
+     <=			小于等于
+     >=			大于等于
+     =			等于
+     <>			不等于
+     !=			不等于
+     between and 	之间
+     #+END_SRC
+
+**** 配合 where (这个有点像 C的 if)
+     #+BEGIN_SRC sql
+     select 字段范围 from 表名 where 条件;
+     
+     ex:
+     select * from student where math > 80;
+
+     select * from student where age <> 55;
+     select * , math + english 总成绩 from student where math + english between 130 and 160;
+     #+END_SRC
+
+*** 逻辑运算符
+**** 逻辑运算符
+     #+BEGIN_SRC sql
+     and (&&)
+     or  (||)
+     not (!)
+     #+END_SRC
+
+**** 配合 where
+     #+BEGIN_SRC sql
+     select * from student where age > 35 && id > 3;
+     select * from student where age > 35 and id > 3;
+     #+END_SRC
+
+** DQL in like 关键字
+*** in
+    - 这是个参数跟字段看是否相等的关键字
+**** 格式用法
+     #+BEGIN_SRC sql
+     where 字段 in (参数类型与字段类型相同)
+     
+     ex:
+     select * from student where id in (1, 2, 4);	// 打印id 是	1、2、4的数据
+     select * from student where id not in (1, 2, 4);	// 打印id 不是 	1、2、4的数据
+     #+END_SRC
+
+*** like
+    - 这是个查找字符串格式的关键字
+**** % _
+     - % 是匹配任意个字符， 像 shell的 *, 0到n个
+     - _ 是匹配一个字符， 规定一个
+**** 格式用法
+     #+BEGIN_SRC sql
+     where 字段 like '通配符字符串';
+     -- 满足同配符字符串规则的数据就会显示出来
+     
+     ex:
+     insert into student (id, name, age, sex, address, math, english) values (9, '小马哥', 22, '男', '香港', 23, 100);
+
+     select * from student where name like '%马%';
+     select * from student where name like '马%';
+     select * from student where name like '马_';
+     select * from student where name like '马__';
+     #+END_SRC
+
+** DQL 排序查询
+   
+*** order by ass/desc
+
+**** 就是这个鸡巴格式
+     #+BEGIN_SRC sql
+     order by 字段名 asc(升序)/desc(降序)	-- 默认是升序
+     #+END_SRC
+
+*** 单列排序
+**** 例子
+     #+BEGIN_SRC sql
+     select * from student order by age asc;
+     #+END_SRC
+
+*** 组合排序
+**** 例子
+     #+BEGIN_SRC sql
+     select * from student order by age desc, math desc;
+     -- 优先以年龄降序， 如果年龄相同， 用数学降序
+     #+END_SRC
+
+** DQL 聚合函数查询
+*** 常用的聚合函数
+    #+BEGIN_SRC sql
+    sum(字段名)		-- 字段总和
+    count(字段名)	-- 字段个数, 如果是null 他不算进去
+    max(字段名)		-- 字段里最大
+    min(字段名)		-- 字段里最小
+    avg(字段名)		-- 字段平均数
+    #+END_SRC
+
+**** 示范例子
+     #+BEGIN_SRC sql
+     select count(*) from student;		-- 9
+     select count(english) from student;	-- 8
+     #+END_SRC
+
+** DQL 分组查询
+*** group by
+    - 单独分组没有意义, 要多个字段才能看出效果
+    - 等于是count统计出来的数字， 再按group by的字段 分开显示
+    - 在相同的字段的记录统计在一起，一起显示出来
+
+**** 格式用法
+     #+BEGIN_SRC sql
+     group by 字段名;
+
+     ex:
+     select sex, count(*) from student group by sex;
+     -- 按性别做列打印统计数字
+     select sex, count(*) from student where age > 25 group by sex;
+     -- 打印 大于25 的 性别分组统计数
+
+     select english, count(*) from student where english > 80 group by english;
+     -- 这个有意思， 就是把english 超过80 的每个数列出来， 如果相同的， 就显示一个分数， 后面统计个数
+
+     +---------+----------+
+     | english | count(*) |
+     +---------+----------+
+     |      87 |        1 |
+     |      99 |        2 |
+     |     100 |        1 |
+     +---------+----------+
+     3 rows in set (0.001 sec)
+     #+END_SRC
+*** having 
+    - 这个跟where有点像， 但不太一样, 相同:能够过滤条件
+**** 格式用法
+     #+BEGIN_SRC sql
+     group by 字段(分组) having 条件;
+
+     ex:
+     select sex, count(*) from student  where age > 25 group by sex having count(*) > 2;
+     -- 把25 岁的 找出来， 用sex分组
+     -- 用 sex count(*) 作为列， sex只有男女， count计算 找出来的 男女
+     -- 只打印大于 2 个数的性别
+     #+END_SRC
+
+**** having 与 where 区别
+     - having 是对 『组数据』 进行过滤， having 可以使用 聚合函数。
+     - where  是对 『行数据』 进行过滤， where 不可以使用聚合函数。
+
+**** 组数据 行数据
+     - 分组后(group by) 聚合函数操作的不再是 行数据， 而是 组数据。
+     - 分组后(group by) 的条件要用 having 子句。
+     - having 必须出现在 select语句中。
+     - 所以分组前 where 分组后 group by
+
+** DQL 分页查询
+*** 添加新数据
+**** 例子
+     #+BEGIN_SRC sql
+     INSERT INTO student(id,NAME,age,sex,address,math,english) VALUES 
+     (10,'唐僧',25,'男','长安',87,78),
+     (11,'孙悟空',18,'男','花果山',100,66),
+     (12,'猪八戒',22,'男','高老庄',58,78),
+     (13,'沙僧',50,'男','流沙河',77,88),
+     (14,'白骨精',22,'女','白虎岭',66,66),
+     (15,'蜘蛛精',23,'女','盘丝洞',88,88);
+     #+END_SRC
+
+*** limit
+    - 可以固定显示多少条 记录(信息、数据)
+    - 淘宝、京东查找商品就是这样， 每次20 个商品左右固定一页
+**** 格式用法
+     #+BEGIN_SRC sql
+     LIMIT offset,length; -- offset 是指偏移量量
+     or
+     limit length;
+
+     SELECT *|字段列列表 [as 别名] FROM 表名 [WHERE子子句句] [GROUP BY子子句句] [HAVING子子句句] [ORDER BY子子句句] [LIMIT子子句句];
+     -- limit一定在最后， 因为排列统计分组后才思考 怎么分页显示
+
+     ex:
+     select * from student limit 0,5;
+
+     select * from student limit 5,5;
+
+     select * from student limit 10,5;
+
+     select * from student order by age limit 0,5;
+     #+END_SRC
+
+
+* 数据库
+** 
+*** 数据库备份和还原
+**** 备份 指令
+     #+BEGIN_SRC sh
+     mysqldump -u用户名 -p密码 数据库 > 文件路径/备份文件名.sql
+     
+     ex:
+     mysqldump -uroot -proot day14 > C:\work\课改\MYSQL课改资料\Day02-MYSQL多表查询\code\bak.sql
+     mysqldump -uroot -proot day14 > ~/Workspace/MySQL/database_backup/day14_bak.sql
+     #+END_SRC
+
+**** 还原 指令
+     #+BEGIN_SRC sh
+     mysql -uroot -p
+     # 登陆
+     #+END_SRC
+
+     #+BEGIN_SRC sql
+     use Day14;
+     source ~/Workspace/MySQL/database_backup/day14_bak.sql
+     ERROR: Failed to open file '/home/jiajun/Workspace/MySQL/database_backup/day14_bak.sql ', error: 2
+     #+END_SRC
+
+* 数据约束
+** 目的
+   - 对数据约束， 为了数据 正确、 有效
+** 约束种类
+*** 6个
+    #+BEGIN_SRC 
+    约束名	约束关键字
+    主键约束	primary key
+    唯一约束	unique
+    非空约束	not null
+    默认约束	default默认值
+    外键约束	constraint foregin key(外键列名) references 主表(主键)
+    检查约束	MySQL不支持，Oracle支持
+    #+END_SRC
+
+** 主键约束
+   - primary key
+*** 属性
+    - 主键必须包含唯一的值
+    - 主键不能包含 NULL 值
+      - 如果我 insert into 一个 null 值去 primary key 会怎样?
+    - 应该不能用在字符串吧
+
+**** 用法
+     - 在声明的时候， 字段类型后面 加 primary key
+**** 格式
+     #+BEGIN_SRC sql
+     create table st5 (
+     id int primary key,
+     name varchar(20),
+     age int
+     );
+
+     insert into st5(id, name) values (1, '唐伯虎');
+     insert into st5(id, name) values (2, '周文斌');
+     insert into st5(id, name) values (3, '祝枝山');
+     insert into st5(id, name) values (4, '文征明');
+
+     insert into st5(id, name) values (null, '罗密欧');	-- 不行
+     -- ERROR 1048 (23000): Column 'id' cannot be null
+
+     insert into st5(id, name) values (1, '蔡徐坤');
+     -- ERROR 1062 (23000): Duplicate entry '1' for key 'PRIMARY'
+     #+END_SRC
+
+*** 删除主键
+    #+BEGIN_SRC sql
+    alter talbe 表名 drop primary key;
+     
+    ex:
+    alter table st5 drop primary key;
+    desc st5;
+    #+END_SRC
+
+*** 增加主键
+    #+BEGIN_SRC sql
+    alter table 表名 change 字段名 字段名 字段类型 primary key;
+
+    ex:
+    alter table st5 change id id int primary key;
+    desc st5;
+    #+END_SRC
+
+*** 主键自增
+    - auto_increment
+**** 格式用法
+     #+BEGIN_SRC sql
+     字段名 字段类型 primary key auto_increment
+     #+END_SRC
+**** 例子
+     #+BEGIN_SRC sql
+     create table st6 (
+     id int primary key auto_increment,
+     name varchar(20),
+     age int
+     );
+
+     insert into st6(name, age) values ('唐僧', 22), ('孙悟空', 26), ('猪八戒', 25), ('沙僧', 20);
+     
+     select * from st6;
+     #+END_SRC
+
+*** 零填充补充
+    - zerofill
+**** 属性
+     - 当整数列的值不满指定位的时候用0填充 (有点像C 的%32d, C语言用空格填充)
+**** 用法
+     - 在声明的时候， 字段类型后面 加 (指定位数) zerofill
+**** 格式
+     #+BEGIN_SRC sql
+     ex:
+     create table st3( 
+     id int(4) zerofill primary key auto_increment,
+     name varchar(20)
+     );
+     
+     insert into st3(name) values("xxx"); 
+     -- 0000, xxx
+     insert into st3(id,name) values(888888,"xxx"); 
+     -- 888888, xxx
+     select * from st3;
+     #+END_SRC
+*** 再次回顾 delete truncate 区别
+**** delete
+     - delete 删除表中的值， 但不重置 auto_increment 的值
+       - 就是之前的 primary key 是多少， delete后从最后的 primary key 开始累积
+**** truncate
+     - truncate 摧毁表， 重建表， auto_increment 重置为 1
+
+** 唯一约束
+   - unique
+*** 属性
+    - 被 设置了唯一约束的字段， 是不能重复出现同样的值
+    - 应该用在字符串吧
+      - 用户名不能重复吧
+
+**** 用法
+     - 在声明时候， 字段类型后面 + unique
+**** 格式
+     #+BEGIN_SRC sql
+     字段名 字段类型 unique
+
+     ex:
+     create table st7 (
+     id int,
+     name varchar(20) unique
+     );
+
+     desc st7;
+
+     insert into st7 values (1, '貂蝉'), (2, '⻄施'), (3, '王昭君'), (4, '杨玉环');
+
+     select * from st7;
+
+     insert into st7 values (5, '貂蝉');
+     -- ERROR 1062 (23000): Duplicate entry '貂蝉' for key 'name'
+
+     insert into st7 values (5, NULL);
+     insert into st7 values (6, NULL);
+     -- null 没有值， 所以不存在重复的问题
+     #+END_SRC
+
+** 非空约束
+   - not null
+*** 属性
+    - 被 设置非空约束的字段， 不能填写 null 值
+    - 但是如果添加数据时， 不指定某个字段的数据， 就要使用 默认值 ———— 关键字 default
+
+**** 用法
+     - 在声明的时候， 字段类型后面 + not null
+**** 格式
+     #+BEGIN_SRC sql
+     字段名 字段类型 not null
+
+     ex:
+     create table st8 (
+     id int,
+     name varchar(20) not null,
+     gender char(2)
+     );
+
+     insert into st8 values (1, '郭富城', '男'), (2, '黎明', '男'), (3, '张学友', '男'), (4, '刘德华', '男');
+
+     select * from st8;
+
+     insert into st8 values (5, null, '男');
+     -- ERROR 1048 (23000): Column 'name' cannot be null
+
+     insert into st8 (id, gender) values (6, '女');	-- 不能不添加非空字段 的数据
+     -- ERROR 1364 (HY000): Field 'name' doesn't have a default value
+     #+END_SRC
+
+*** 默认值
+    - default
+**** 属性
+     - 如果添加数据 不想往 非空字段 添加数据， 就要用  default
+**** 用法
+     -  在声明的时候， 字段类型后面 + default '字段默认值'
+**** 格式
+     #+BEGIN_SRC sql
+     字段名 字段类型 default '字段默认值'
+
+     ex:
+     create table st9 (
+     id int,
+     name varchar(20),
+     address varchar(50) default '广州'
+     );
+
+     insert into st9 (id, name) values (1, '刘德华');
+     insert into st9 values (2, '张学友', '香港');
+     #+END_SRC
+
+*** 非空唯一约束 与 主键约束 的区别
+    - 一张表只能有一个 字段可以设置为 主键约束
+    - 一张表可以有多个 字段 设置为 非空唯一约束
+    - 主键可以主动增长(auto_increment)， 但是非空与唯一不能自动增长
+
+
+** 外键约束
+*** 单表的外键
+**** 错误例子:
+     #+BEGIN_SRC sql
+     create table emp (
+     id int primary key auto_increment,
+     name varchar(20),
+     age int,
+     dep_name varchar(30),
+     dep_location varchar(30)
+     );
+
+     insert into emp (name, age, dep_name, dep_location) values 
+     ('张三', 20, '研发部', '广州'),
+     ('李四', 21, '研发部', '广州'),
+     ('王五', 20, '研发部', '广州'),
+     ('老王', 20, '销售部', '深圳'),
+     ('大王', 22, '销售部', '深圳'),
+     ('小王', 18, '销售部', '深圳');
+     #+END_SRC
+***** 这个列表出现数据冗余。
+
+**** 改进
+     #+BEGIN_SRC sql
+     create table dept(
+     id int primary key auto_increment,
+     dept_name varchar(20) not null,
+     dept_loc varchar(20) not null
+     );
+
+     create table employee(
+     id int primary key auto_increment,
+     name varchar(20) not null,
+     age int,
+     dept_id int -- 部门编号
+     );
+
+     insert into dept(dept_name,dept_loc) values('研发部','广州'),('销售部','深圳');
+
+     insert into employee(name,age,dept_id) values
+     ('张三',20,1),
+     ('李四',21,1),
+     ('王五',20,1),
+     ('老王',20,2),
+     ('大王',22,2),
+     ('小王',18,2);
+
+     select * from dept;
+     select * from employee;
+     #+END_SRC
+**** 总结:
+     - 单表的问题， 数据冗余， 重复大量数据
+     - 解决方法， 将数据拆分多张表存储
+
+*** 外键约束 概念
+**** 什么是外键约束
+     - 一张表的某个字段引用另一个表的主键
+**** 主表
+     - 约束别人
+       - 比如 上个例子的 dept 就是 employee 的主表
+**** 副表/从表
+     - 使用别人的数据， 被别人约束
+       - 比如 上个例子的 employee 就是 dept 的从表
+**** 用法
+     - 新建表时增加外键
+       #+BEGIN_SRC sql
+       [CONSTRAINT] [外键约束名称] FOREIGN KEY(外键字段名) REFERENCES 主表名(主键字段名) 
+       /*
+       关键字解释: 
+       CONSTRAINT -- 约束关键字 
+       FOREIGN KEY(外键字段名) -- 某个字段作为外键 
+       REFERENCES -- 主表名(主键字段名) 表示参照主表中的某个字段
+       [外键约束名称] 可以省略?
+       */
+       #+END_SRC
+     - 已有表增加外键
+       #+BEGIN_SRC sql
+       ALTER TABLE 从表 ADD [CONSTRAINT] [外键约束名称] FOREIGN KEY (外键字段名) REFERENCES 主表(主键字段名);
+       #+END_SRC
+     - 例子
+       #+BEGIN_SRC sql
+       create table new_employee (
+       id int primary key auto_increment,
+       name varchar(20) not null,
+       age int,
+       -- dep_in int, 漏了
+       constraint emp_dept foreign key (dept_id) references dept(id)
+       );
+       
+       /*
+       ERROR 1064 (42000): You have an error in your SQL syntax; 
+       check the manual that corresponds to your MariaDB server version for the right syntax to use near 
+       '[Day14]> create table new_employee (id int primary key auto_increment, ' at line 1
+       */
+
+       create table new_employee (
+       id int primary key auto_increment,        
+       name varchar(20),        
+       age int,
+       dep_id int,
+       constraint emp_depid_ref_dep_id_fk foreign key(dep_id) references dept(id)
+       );
+
+       
+       insert into new_employee (name, age, dep_id) values
+       ('张三', 20, 1),
+       ('李四', 21, 1),
+       ('王五', 20, 1),
+       ('老王', 20, 2),
+       ('大王', 22, 2),
+       ('小王', 18, 2);
+
+       -- 添加数据失败， 因为主表没有这个 主键 5
+       insert into employee (name, age, dept_id) values ('二王', 20, 5);
+       #+END_SRC
+
+*** 删除外键
+    - alter table 从表 drop foreign key 外键名称约束
+
+**** 格式用法
+     #+BEGIN_SRC sql
+     -- 删除employee表的emp_depid_ref_dep_id_fk外键1
+     alter table employee drop foreign key emp_depid_ref_dep_id_fk;
+     #+END_SRC
+
+*** 添加外键
+    - alter table 从表 add constraint 外键名称约束 foreign key(外键字段名) references 主表(主表字段名))
+
+**** 格式用法
+     #+BEGIN_SRC sql
+     -- 在employee表存在况下添加外键
+     alter table employee add constraint emp_depid_ref_dep_id_fk foreign key(dep_id) references dept(id);
+     #+END_SRC
+
+*** 外键的级联
+    - 能不能删除或者修改 主表 的 主键 
+      - 不能
+      - 会报错
+**** 什么是级联操作
+     - 在修改或者删除 主表的主键时， 同时更新 或删除 附表 的外键值， 称 级联操作(on update cascade)
+     - 级联更新， 主键发生更新， 外键也会更新
+     - 级联删除， 主键发生删除， 外键也会删除
+     - 这个操作需要声明
+
+**** on update cascade
+     - 级联更新
+
+**** on delete cascade
+     - 级联删除
+
+**** 就是主键改变， 外键也改变， 比如 把上面的 dept表的id 主键的1 改成10， new_employee关联了1 的值也会改变为 10
+     #+BEGIN_SRC sql
+     create table employee (
+     id int primary key auto_increment,
+     name varchar(20),
+     age int,
+     dept_in int,
+     constraint employee_dept foreign key (dept_in) references dept(id) on update cascade on delete cascade
+     );
+
+     INSERT INTO employee (NAME, age, dept_in) VALUE
+     ('张三', 20, 1),
+     ('李四', 21, 1),
+     ('王五', 20, 1),
+     ('老王', 20, 2),
+     ('大王', 22, 2),
+     ('小王', 18, 2);
+
+     select * from employee;
+     select * from dept;
+
+     update dept set id = 10 where id = 1;
+
+     select * from employee;
+     +----+--------------+------+---------+
+     | id | name        | age  | dept_in |
+     +----+--------------+------+---------+
+     |  1 | 张三         |   20 |      10 |
+     |  2 | 李四         |   21 |      10 |
+     |  3 | 王五         |   20 |      10 |
+     |  4 | 老王         |   20 |       2 |
+     |  5 | 大王         |   22 |       2 |
+     |  6 | 小王         |   18 |       2 |
+     +----+--------------+------+---------+
+
+     #+END_SRC
+
+
+* 表关系
+** 一对一
+*** 一对一
+**** 外键唯一
+     - 在从表添加一列作为外键引用主表的主键列的值 给 外键列添加唯一约束
+**** 主键是外键
+     - 从表的主键(唯一) 作为 外键 引用 主表 的主键 (主键 一对一 ？)
+**** 例子: 不是一对一的外键约束
+     #+BEGIN_SRC sql
+     create table jl(id int primary key auto_increment, content varchar(2000));
+     
+     create table stu(
+     id int primary key auto_increment,
+     name varchar(20) not null,
+     jl_id int unique,
+     constraint foreign key (jl_id) references jl(id)
+     );
+     #+END_SRC
+**** 例子: 一对一的 外键约束
+     #+BEGIN_SRC sql
+     create table jl(id int primary key auto_increment, content varchar(2000));
+
+     create table stu (
+     id int primary key auto_increment,
+     name varchar(20),
+     constraint foreign key (id) references jl(id)
+     );
+     #+END_SRC
+
+** 一对多
+*** 一对多
+**** 概念
+     - 在从表(多方)添加一列作为外键列引用主表(一方)的主键列的值
+     - 从表不唯一的列(字段) 可以重复引用 主表 的主键字段(唯一) 的值
+**** 例子: 一对多的外键约束
+     #+BEGIN_SRC sql
+     create table db (
+     id int primary key auto_increment, 
+     depa_name varchar(20) not null, 
+     depa_loc varchar(20) not null
+     );
+
+     create table em (
+     id int primary key auto_increment,
+     name varchar(20) not null,
+     age int,
+     depa_id int,			-- 这个不是唯一值， 所有员工都可以在同一部门， 所以是部门1个id对多个员工
+     constraint foreign key (depa_id) references db(id)
+     );
+
+     #+END_SRC
+
+** 多对多
+*** 多对多
+**** 概念
+     - 创建一个中间表， 至少两个字段， 字段都是外键， 各自指向其他表的主键，
+     - constraint 每一个主表的 主键
+     - 然后中间表 primary key(两个外键组合)
+       - ex: primary key(客户，旅游方式)， 中间表还有个字段是 旅游景点
+
+
+**** 例子
+     #+BEGIN_SRC sql
+     create table course(
+     id int primary key auto_increment,
+     name varchar(20) not null unique
+     );
+
+     create table stu(
+     id int primary key auto_increment,
+     name varchar(20) not null
+     );
+
+
+     create table stu_course(
+     sid int,
+     cid int,
+     constraint foreign key(sid) references stu(id),
+     constraint foreign key(cid) references course(id),
+     primary key(sid,cid)		-- 联合主键约束
+     );
+     #+END_SRC

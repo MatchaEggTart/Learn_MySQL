@@ -1,0 +1,283 @@
+** DDL
+*** 网络设定
+**** 启动 Mariadb
+     #+BEGIN_SRC sh
+     systemctl start mariadb
+     #+END_SRC
+**** 关闭 Mariadb
+     #+BEGIN_SRC sh
+     systemctl stop mariab
+     #+END_SRC
+**** 默认开启
+     #+BEGIN_SRC sh
+     systemctl enable mariadb
+     #+END_SRC
+**** 默认关闭
+     #+BEGIN_SRC sh
+     systemctl disenble mariadb
+     #+END_SRC
+**** 初始设置
+     #+BEGIN_SRC sh
+     mysql_secure_installation 
+     #+END_SRC
+**** 退出
+     #+BEGIN_SRC sh
+     exit
+     #+END_SRC
+**** 检查 mariadb 是否启动
+     #+BEGIN_SRC sh
+     ps -aux | grep mariadb
+     #+END_SRC
+
+*** 进入/退出 Mariadb
+**** 启动 Mariadb
+     #+BEGIN_SRC sh
+     mysql -uroot -p
+     #+END_SRC
+**** 推出 Mariadb
+     #+BEGIN_SRC sh
+     exit;
+     quit;
+     #+END_SRC
+
+*** 数据库操作
+**** 创建数据库
+     #+BEGIN_SRC sql
+     create database databaseName;
+     create datebase if exists 数据库名;
+     #+END_SRC
+**** 创建数据库规定字符类型
+     #+BEGIN_SRC sql
+     create database databaseName default character set 编码名称;
+     ex:
+     create database db1 default character set GBK;
+     create database db1 default character set utf8;	// 这个安全啊！
+     #+END_SRC
+**** 查看所有数据库信息
+     #+BEGIN_SRC sql
+     show databases;
+     #+END_SRC
+**** 修改数据库
+     #+BEGIN_SRC sql
+     alter database 数据库名 default character set 编码名称呢;
+     #+END_SRC
+**** 删除数据库
+     #+BEGIN_SRC sql
+     drop database 数据库名;
+     drop database if exists 数据库名;	//删除如果存在的数据库
+     #+END_SRC
+
+**** 查看正在使用的数据库
+     #+BEGIN_SRC sql
+     select database();
+     #+END_SRC
+
+**** 使用/切换数据库
+     #+BEGIN_SRC sql
+     use 数据库名;
+     #+END_SRC
+
+*** 操作表
+**** 创建表
+     #+BEGIN_SRC sql
+     create table 表名 (字段名1 字段类型1, 字段名2 字段类型2...);
+     or
+     create table 表名 (
+     字段名1, 字段类型1,
+     字段名2, 字段类型2
+     );
+     #+END_SRC
+
+**** 查看表
+     #+BEGIN_SRC sql
+     show tables;
+     #+END_SRC
+**** 查看表结构
+     #+BEGIN_SRC sql
+     desc 表名;
+     #+END_SRC
+**** 查看创表语句(表里创建的SQL语句)
+     #+BEGIN_SRC sql
+     show create table 表名;
+     #+END_SRC
+**** 快速创建一个表结构相同的表
+     #+BEGIN_SRC sql
+     create table 表名 like 表名;
+     ex:
+     create table s1 like student;
+     #+END_SRC
+**** 删除表
+     #+BEGIN_SRC sql
+     drop table 表名;
+     drop table if exists 表名;
+     #+END_SRC
+
+*** 修改表结构
+**** 添加字段(field)
+     #+BEGIN_SRC sql
+     alter table 表名 add 列名 类型;
+     ex:
+     alter table student add gendre char;
+     #+END_SRC
+**** 修改列类型(字段类型)
+     #+BEGIN_SRC sql
+     alter table 表名 Modify 列名 类型;
+     ex:
+     alter table student modify gendre int;
+     #+END_SRC
+**** 修改列名(字段名)
+     #+BEGIN_SRC sql
+     alter table 表名 change 旧列名 新列名 新类型;
+     ex:
+     alter table student change gendre size double;
+     #+END_SRC
+
+**** 删除列(字段)
+     #+BEGIN_SRC sql
+     alter table 表名 drop 列名;
+     ex:
+     alter table student drop size;
+     #+END_SRC
+
+**** 修改表名
+     #+BEGIN_SRC sql
+     rename table 旧表名 to 新表名;
+     #+END_SRC
+
+**** 修改字符集
+     #+BEGIN_SRC sql
+     alter table 表名 character set 编码;
+     ex:
+     alter table person character set gbk;
+     #+END_SRC
+
+** DML 语句
+*** 插入记录
+**** 插入全部字段
+     #+BEGIN_SRC sql
+     insert into 表名 (字段名1, 字段名2, 字段名3...) values (值1, 值2, 值3...);
+
+     ex:
+     insert into person (id, name, birthday) values (01, '孙悟空', '1999-01-01');
+     #+END_SRC
+**** 插入部分字段
+     #+BEGIN_SRC sql
+     insert into 表明 (字段名1, 字段名2, 字段名3...) values (值1, 值2, 值3...);
+     // 没有添加的字段会使用 NULL
+     ex:
+     insert into person (id, name) values (02, '猪八戒');
+     #+END_SRC
+**** 注意:
+     - 值与字段必须对应， 个数相同， 类型相同
+     - 值的数据大小必须在字段长度范围内
+     - 除了数值， 其他类型必须用 引号括起来	(建议 单引号 ' ')
+     - 如果要插入空值， 可以用null 或者 省略字段
+**** 插入多条记录
+     #+BEGIN_SRC sql
+     insert into 表名 (字段名1, 字段名2, 字段名3...) values (值1, 值2, 值3...), (字段名1, 字段名2, 字段名3...) values (值1, 值2, 值3...),
+     (字段名1, 字段名2, 字段名3...) values (值1, 值2, 值3...);
+     
+     ex:
+     insert into person values(3, 'rose', '2001-10-20'),
+     (4, 'rose','女', '2001-10-20');
+     #+END_SRC
+
+*** 蠕虫复制
+**** 什么是蠕虫复制
+     - 在已有的数据进行复制， 粘贴在跟自己格式一样的表里面
+**** 例子
+     #+BEGIN_SRC sql
+     create table 表名1 like 表名2;
+     insert into 表明1 select * from 表名2;
+     // 将表名2的数据复制到表名1
+    
+     ex:
+     create table student like person;
+     insert into student select * from person;
+     #+END_SRC
+
+*** 更新表数据
+**** update
+     - 修改数据
+**** set
+     - 修改哪个字段
+**** where
+     - 指定条件
+
+**** 不带关键字修改数据
+     #+BEGIN_SRC sql
+     update 表名 set 字段名 = 值;
+     
+     ex:
+     update student set id = 1;		// student 表内的所有 id 字段 变成 1
+     #+END_SRC
+
+**** 带关键字修改数据
+     #+BEGIN_SRC sql
+     update 表名 set 字段名 = 值 where 字段名 = 值;
+     
+     ex: 
+     update student set id = 2 where name = "猪八戒";	// student 表内所有 name 是猪八戒的 id 变成 2
+     #+END_SRC
+
+*** 删除表记录
+**** delete
+     #+BEGIN_SRC sql
+     delete from 表明;			// 删除表里面所有数据
+     
+     delete from 表名 where 字段名 = 值;	// 删除符合条件下的记录
+
+     ex:
+     delete from student;
+     delete from student where name = "猪八戒";
+     #+END_SRC
+**** truncate
+     #+BEGIN_SRC sql
+     truncate table 表名;
+     #+END_SRC
+**** delete 与 truncate 区别
+     - delete 是将表中的记录一条一条删除
+     - truncate 是将整个表摧毁， 再重新创建一个原来的表结构一样的表
+
+** DQL
+*** 查询
+**** 查询所有的数据(记录)
+     #+BEGIN_SRC sql
+     select * from 表名;
+     
+     ex:
+     select * from student;
+     #+END_SRC
+**** 查询指定列	// 就显示那一列字段
+     #+BEGIN_SRC sql
+     select 字段名1, 字段名2... from 表名;
+     #+END_SRC
+**** 别名查询
+     - 可以把字段名换成其他名字来显示
+     #+BEGIN_SRC sql
+     select  字段名1 as 别名1, 字段名2 as 别名2 from 表名;
+     #+END_SRC
+     - as 其实可以省略
+**** 清除重复值
+     - 会显示 里面的字段名1、字段名2...但是重复的值不会显示
+     #+BEGIN_SRC sql
+     select distinct 字段名1, 字段名2,... from 表名;
+     #+END_SRC
+
+**** 查询结果参与运算
+     #+BEGIN_SRC sql
+     delete from student;
+     insert into student (id, name, math, english) values (1, '张三', 100, 80), (2, '李四', 89, 71), (3, '
+     王五', 68, 72);
+     update student set birthday = '1994-03-04';
+     select * from student;
+     select math + english form student;		// 会列出数学 + 英语的成绩， 当然其他不列出来
+     select math + english as 总成绩 form student;	// 会列出数学 + 英语， 还用了别名
+     select * , math + english as 总成绩 from student;	// 所有记录加上总成绩都会列出来
+     select *, math + english as 总成绩 from student;
+     select *, age + 10 from student;			// 列出所有记录并在age上 + 10
+
+     #+END_SRC
+
+** 问题
+**** where 的时候 如何定位到 字段 是 null 的记录(数据)

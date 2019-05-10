@@ -1,0 +1,793 @@
+* 
+** 数据库三大范式
+
+**** 范式
+***** 就是规范啦
+
+*** 第一范式
+
+**** (1NF) 要求
+     - 每一列都要保证原子性
+
+**** 原子性
+     - 不可再分割
+     - 比如 开始时间 结束时间， 就应该分割成两个字段， 开始时间 date， 结束时间 date
+
+**** 原因
+     - 如果要仔细查询， 没有原子性不方便查询， 为了查询方便而存在
+
+*** 第二范式
+
+**** (2NF) 要求
+     - 要求在第一范式基础上满足两个条件
+       - 1. 一张表只能描述一件事
+       - 2. 每张表必须有主键
+
+**** 原因
+     - 没满足第二范式， 数据会冗余， 相同数据无法区分
+     - 主键可以帮忙区分数据
+
+*** 第三范式
+
+**** (3NF) 要求
+     - 满足第二范式后要求 一张表 不能引用 另一张表 的 非主键字段 的值。
+       - 就是 必须 主键 作为 外键的连接对象
+     - 我觉得就是中间表 全是 外键就好了， 这样肯定没问题
+
+**** 原因
+     - 相同数据不能区分， 修改数据时， 多张表都要一起修改， 
+       - 比如如果 员工 表 连接的 不是 部门 的主键id， 而是连接 部门名字， 如果 部门表的 部门位置字段要修改， 怎么改?
+       - 如果连这部门id这个字段， 只需要改部门位置信息就好了
+
+
+
+** 多表查询概述 和 数据准备
+*** 什么是多表查询
+**** 就是一次把几个表组合显示出来嘛。
+**** 例子
+     #+BEGIN_SRC sql
+     create table dept(
+     id int primary key auto_increment,
+     name varchar(20) not null unique
+     );
+
+     insert into dept(name) values('开发部'),('市场部'),('财务部');
+
+
+     create table emp(
+     id int primary key auto_increment,
+     name varchar(20) not null,
+     gender char(1),
+     salary double,
+     join_date date,
+     dept_id int,
+     constraint foreign key(dept_id) references dept(id) -- 外键约束
+     );
+
+
+     insert into emp(name,gender,salary,join_date,dept_id) values('孙悟空','男',7200,'2013-02-24',1);
+     insert into emp(name,gender,salary,join_date,dept_id) values('猪八戒','男',3600,'2010-12-02',2);
+     insert into emp(name,gender,salary,join_date,dept_id) values('唐僧','男',9000,'2008-08-08',2);
+     insert into emp(name,gender,salary,join_date,dept_id) values('白骨精','女',5000,'2015-10-07',3);
+     insert into emp(name,gender,salary,join_date,dept_id) values('蜘蛛精','女',4500,'2011-03-14',1);
+
+     select * from dept;
+     select * from emp;
+
+     -- 多表查询
+     select * from emp, dept;
+     select * from emp, dept;
+     #+END_SRC
+
+**** 出现了
+     #+BEGIN_SRC sh
+     +----+-----------+--------+--------+------------+---------+----+-----------+
+     | id | name      | gender | salary | join_date  | dept_id | id | name      |
+     +----+-----------+--------+--------+------------+---------+----+-----------+
+     |  1 | 孙悟空    | 男     |   7200 | 2013-02-24 |       1 |  2 | 市场部    |
+     |  1 | 孙悟空    | 男     |   7200 | 2013-02-24 |       1 |  1 | 开发部    |
+     |  1 | 孙悟空    | 男     |   7200 | 2013-02-24 |       1 |  3 | 财务部    |
+     |  2 | 猪八戒    | 男     |   3600 | 2010-12-02 |       2 |  2 | 市场部    |
+     |  2 | 猪八戒    | 男     |   3600 | 2010-12-02 |       2 |  1 | 开发部    |
+     |  2 | 猪八戒    | 男     |   3600 | 2010-12-02 |       2 |  3 | 财务部    |
+     |  3 | 唐僧      | 男     |   9000 | 2008-08-08 |       2 |  2 | 市场部    |
+     |  3 | 唐僧      | 男     |   9000 | 2008-08-08 |       2 |  1 | 开发部    |
+     |  3 | 唐僧      | 男     |   9000 | 2008-08-08 |       2 |  3 | 财务部    |
+     |  4 | 白骨精    | 女     |   5000 | 2015-10-07 |       3 |  2 | 市场部    |
+     |  4 | 白骨精    | 女     |   5000 | 2015-10-07 |       3 |  1 | 开发部    |
+     |  4 | 白骨精    | 女     |   5000 | 2015-10-07 |       3 |  3 | 财务部    |
+     |  5 | 蜘蛛精    | 女     |   4500 | 2011-03-14 |       1 |  2 | 市场部    |
+     |  5 | 蜘蛛精    | 女     |   4500 | 2011-03-14 |       1 |  1 | 开发部    |
+     |  5 | 蜘蛛精    | 女     |   4500 | 2011-03-14 |       1 |  3 | 财务部    |
+     +----+-----------+--------+--------+------------+---------+----+-----------+
+
+     #+END_SRC
+
+
+
+** 笛卡尔积现象
+
+*** 什么是 笛卡尔积现象
+**** 
+     - 像上面的， 因为要把 emp(5个数据) 跟 dept (3个数据) 一起打印， 会出现 5*3 = 15 ， 15条数据
+     - 最要命的是 emp 跟 dept 之间 的一对多， 结果不如人意啊
+*** 怎么清除
+**** 用规定， 加上过滤条件
+     - emp 的 dept_id 应该 与 dept 的 id相等才能输出
+**** 例子
+     #+BEGIN_SRC sql
+     select * from emp, dept where emp.dept_id = dept.id;
+     #+END_SRC
+**** 格式
+     - 在查询时加上过滤条件,	过滤条件:从表.外键列列名 = 主表.主键列列名;
+
+
+** 内连接查询
+
+*** 先上个例子
+**** 
+     #+BEGIN_SRC sql
+     select e.id 员工编号, e.name 姓名, e.gender 性别, 
+     e.salary 工资, d.name 部门名称  -- 确定要查询的字段
+     from emp as e,dept as d -- 确定要查询的表
+     where e.dept_id = d.id;	-- 确定连接条件
+
+     # 显示内连接查询：inner join 表名 on 条件
+     select e.id 员工编号, e.name 姓名, e.gender 性别, 
+     e.salary 工资, d.name 部门名称  -- 确定要查询的字段
+     from emp e   -- 要查询的表
+     inner join dept d  -- 要连接的表
+     on e.dept_id = d.id 	-- 确定连接条件
+     order by e.id;
+
+     select e.id, e.name, e.gender, e.salary, 
+     d.name from emp e, dept d where e.dept_id = d.id;
+     -- 隐式内连接
+
+     select e.id, e.name, e.gender, e.salary, 
+     d.name from emp e inner join dept d on e.dept_id = d.id order by e.id;
+     -- 显式内连接
+     #+END_SRC
+
+*** 隐式内连接from
+**** 格式用法
+     #+BEGIN_SRC sql
+     select 字段名 from 左表, 右表 where 条件;
+     #+END_SRC
+
+*** 显式内连接
+**** 格式语法
+     #+BEGIN_SRC sql
+     select 字段名 from 左表 inner join 右表 on 条件;
+     #+END_SRC
+
+*** 特点
+**** 
+     - 用左表的记录和右表的记录进行匹配， 只有满足条件的记录才会显示出来
+
+*** 多表连接查询步骤
+**** 
+     - 先确定有哪些表
+     - 确定查询的字段有哪些
+     - 确定连接条件
+
+
+
+** 左外连接查询
+
+*** 
+**** 例子
+     #+BEGIN_SRC sql
+     insert into dept(name) values('销售部');
+     insert into emp(name,gender,salary, join_date) values ('沙僧','男',1800,'2011-10-20');
+
+     select  d.* ,e.* -- 要查询的字段
+     from emp e   -- 要查询的表
+     inner join dept d  -- 要连接的表
+     on e.dept_id = d.id; -- 连接条件
+
+     -- 将内连接改为左连接看查询结果
+     select  d.* ,e.* -- 要查询的字段
+     from dept d   -- 要查询的表
+     left join emp e -- 要连接的表
+     on e.dept_id = d.id; -- 连接条件
+     #+END_SRC
+**** 结果
+     #+BEGIN_SRC sh
+     +----+-----------+----+-----------+--------+--------+------------+---------+
+     | id | name      | id | name      | gender | salary | join_date  | dept_id |
+     +----+-----------+----+-----------+--------+--------+------------+---------+
+     |  1 | 开发部    |  1 | 孙悟空    | 男     |   7200 | 2013-02-24 |       1 |
+     |  2 | 市场部    |  2 | 猪八戒    | 男     |   3600 | 2010-12-02 |       2 |
+     |  2 | 市场部    |  3 | 唐僧      | 男     |   9000 | 2008-08-08 |       2 |
+     |  3 | 财务部    |  4 | 白骨精    | 女     |   5000 | 2015-10-07 |       3 |
+     |  1 | 开发部    |  5 | 蜘蛛精    | 女     |   4500 | 2011-03-14 |       1 |
+     +----+-----------+----+-----------+--------+--------+------------+---------+
+
+     +----+-----------+------+-----------+--------+--------+------------+---------+
+     | id | name      | id   | name      | gender | salary | join_date  | dept_id |
+     +----+-----------+------+-----------+--------+--------+------------+---------+
+     |  2 | 市场部    |    2 | 猪八戒    | 男     |   3600 | 2010-12-02 |       2 |
+     |  2 | 市场部    |    3 | 唐僧      | 男     |   9000 | 2008-08-08 |       2 |
+     |  1 | 开发部    |    1 | 孙悟空    | 男     |   7200 | 2013-02-24 |       1 |
+     |  1 | 开发部    |    5 | 蜘蛛精    | 女     |   4500 | 2011-03-14 |       1 |
+     |  3 | 财务部    |    4 | 白骨精    | 女     |   5000 | 2015-10-07 |       3 |
+     |  4 | 销售部    | NULL | NULL      | NULL  |   NULL | NULL       |    NULL |
+     +----+-----------+------+-----------+--------+--------+------------+---------+
+
+     #+END_SRC
+
+**** 特别
+     - inner 换成 了 left, 
+**** 语法
+     #+BEGIN_SRC sql
+     select 字段名 from 左表 left outer join 右表 on 条件;	-- outer 可以省略
+     #+END_SRC
+
+**** 特点
+     - 能够保证左表的记录全部查询出来
+     - 你看右表(emp) 其实添加了沙僧 但是没有显示出来, 虽然销售部什么也没有 但还是显示出来了
+
+
+
+** 右外连接查询
+
+*** 
+**** 例子
+     #+BEGIN_SRC sql
+     -- 使用右连接查询员工信息和部门信息
+     select *  -- 要查询字段
+     from dept d -- 要查询的表
+     right join emp e -- 要连接的表
+     on d.id = e.dept_id; -- 连接条件
+
+
+     select *  -- 要查询字段
+     from emp e -- 要查询的表
+     left join dept d -- 要连接的表
+     on d.id = e.dept_id; -- 连接条件
+     #+END_SRC
+
+**** 语法
+     #+BEGIN_SRC sql
+     select 字段名 from 左表 right join 右表 on 条件;
+     #+END_SRC
+
+**** 特点
+     - 能够保证右表的记录全部查询出来
+
+
+** 全连接
+
+*** 
+**** 例子
+     #+BEGIN_SRC sql
+     -- 全连接：能够保证左表和右表的记录能够全部查询出来，MySQL不支持，Oracle支持
+     -- 全连接：full join 表名 on 条件
+     select *  -- 要查询字段
+     from emp e -- 要查询的表
+     full join dept d -- 要连接的表
+     on d.id = e.dept_id; -- 连接条件
+     #+END_SRC
+
+**** 语法
+     #+BEGIN_SRC sql
+     select 字段名 from 左表 full join 右表 on 条件;
+     #+END_SRC
+
+**** 特点
+     - 保证左右表都能查询出来
+     - MySQL 不支持， Oracle支持
+
+
+** 子查询概述
+
+*** 
+**** 什么是子查询
+     - 一条查询语句作为另一条查询语句的条件或结果使用：查询嵌套
+**** 子查询分类
+     - 单行单列子查询   多行单列子查询  多行多列子查询
+**** 子查询应用场景
+     - 当执行一条查询语句时需要使用到的数据需要通过另一条查询语句获取
+
+**** 例子:
+     #+BEGIN_SRC sql
+     select max(salary) from emp;
+     -- 查询最高工资的员工信息
+     select * from emp where salary = (select max(salary) from emp);
+
+     -- 查询工资小于平均工资的员工有哪些
+     -- 先查询平均工资是多少
+     select avg(salary) from emp;
+     -- 然后再查询工资小于平均工资的员工信息
+     select * from emp where salary < (select avg(salary) from emp);
+
+     # 查询工资大于"蜘蛛精"的员工信息
+     -- 先查询蜘蛛精工资是多少
+     select salary from emp where name = '蜘蛛精';
+     -- 然后查询工资大于蜘蛛精工资的员工信息
+     select * from emp where salary > (select salary from emp where name = '蜘蛛精');
+     #+END_SRC
+
+**** 单行单列子查询 的概念
+     - 子查询查询结果是单行单列的值，父查询可以使用比较运算符。
+     - 要查字段容易， 可是要显示 最大、最少、大于平均值啊， 那些成员其他字段， 你就必须用 括号括起来， 再放在条件比较
+     - 这就是子查询， 就一行指令实际不止一条指令， 还干了其他
+     - 一行指令， 那是父查询， 一行指令里面还有查询指令， 还是子查询， 父查询可以使用比较运算符 来比较 已经运行的 子查询语句
+
+
+
+** 多行单列子查询
+
+*** 
+**** 例子
+     #+BEGIN_SRC sql
+     -- 子查询之多行单列子查询：子查询结果就是多行单列的值
+     -- 查询工资大于5000的员工，来自于哪些部门的名字  
+     -- 先查询工资大于5000的员工信息
+     select dept_id from emp where salary > 5000;
+     -- 根据部门id查询部门名称
+     select * from dept where id = 1 or id = 2;
+     select * from dept where id in (select dept_id from emp where salary > 5000);
+
+     -- 查询开发部与财务部所有的员工信息
+     -- 先查询开发部和财务部的部门id
+     select id from dept where name in('开发部','财务部');
+     -- 然后查询开发部和财务部的员工信息
+     select * from emp where dept_id in (select id from dept where name in('开发部','财务部'));
+     #+END_SRC
+
+**** in
+     #+BEGIN_SRC sql
+     select * from student where id in (1, 2, 4);	// 打印id 是	1、2、4的数据
+     #+END_SRC
+
+**** 用法
+     - 子查询结果是多行行行单列列值,父查询使用用in运算符
+     - 就是一行指令不止一个子查询就是多行单列子查询， 然后用in 把范围锁死 在子查询结果里
+
+
+** 多行多列子查询
+
+*** 
+
+**** 例子
+     #+BEGIN_SRC sql
+     -- 多行多列子查询：子查询结果是多行多列的值，是一张虚拟张，可以和其他表进行表连接查询
+     -- 查询2011年以后入职的员工信息和部门信息
+     -- 先查员工表：将2011年入职的员工查询出来
+     select * from emp where join_date > '2010-12-31';
+
+     select e.*,d.* -- 要查询的字段
+     from dept d -- 要查询的表
+     right join (select * from emp where join_date > '2010-12-31') e -- 要连接的表
+     on e.dept_id = d.id -- 连接条件
+     select e.*,d.* from dept d right join (select * from emp where join_date > '2010-12-31') e on e.dept_id = d.id;
+     #+END_SRC
+
+**** 特点
+     - 就是用连接表的方法， 在查询结果用 from left/right join on 连接起来， 等于把子查询的结果作为表一起查询
+
+**** 用法
+     - 子子查询结果是多行多列的值,是一张虚拟张,可以和其他表进行行行表连接查询
+
+
+** 多表查询案例
+
+*** 
+
+**** 准备数据
+     #+BEGIN_SRC sql
+     -- 部门表
+     CREATE TABLE dept (
+     id INT PRIMARY KEY, -- 部门id
+     dname VARCHAR(50), -- 部门名称
+     loc VARCHAR(50) -- 部门位置
+     );
+
+     -- 添加4个部门
+     INSERT INTO dept(id,dname,loc) VALUES 
+     (10,'教研部','北京'),
+     (20,'学工部','上海'),
+     (30,'销售部','广州'),
+     (40,'财务部','深圳');
+
+     -- 职务表，职务名称，职务描述
+     CREATE TABLE job (
+     id INT PRIMARY KEY,
+     jname VARCHAR(20),
+     description VARCHAR(50)
+     );
+
+     -- 添加4个职务
+     INSERT INTO job (id, jname, description) VALUES
+     (1, '董事长', '管理整个公司，接单'),
+     (2, '经理', '管理部门员工'),
+     (3, '销售员', '向客人推销产品'),
+     (4, '文员', '使用办公软件');
+
+     -- 员工表
+     CREATE TABLE emp (
+     id INT PRIMARY KEY, -- 员工id
+     ename VARCHAR(50), -- 员工姓名
+     job_id INT, -- 职务id
+     mgr INT , -- 上级领导
+     joindate DATE, -- 入职日期
+     salary DECIMAL(7,2), -- 工资 decimal 
+     bonus DECIMAL(7,2), -- 奖金
+     dept_id INT, -- 所在部门编号
+     CONSTRAINT emp_jobid_ref_job_id_fk FOREIGN KEY (job_id) REFERENCES job (id),
+     CONSTRAINT emp_deptid_ref_dept_id_fk FOREIGN KEY (dept_id) REFERENCES dept (id)
+     );
+
+     -- 添加员工
+     INSERT INTO emp(id,ename,job_id,mgr,joindate,salary,bonus,dept_id) VALUES 
+     (1001,'孙悟空',4,1004,'2000-12-17','8000.00',NULL,20),
+     (1002,'卢俊义',3,1006,'2001-02-20','16000.00','3000.00',30),
+     (1003,'林冲',3,1006,'2001-02-22','12500.00','5000.00',30),
+     (1004,'唐僧',2,1009,'2001-04-02','29750.00',NULL,20),
+     (1005,'李逵',4,1006,'2001-09-28','12500.00','14000.00',30),
+     (1006,'宋江',2,1009,'2001-05-01','28500.00',NULL,30),
+     (1007,'刘备',2,1009,'2001-09-01','24500.00',NULL,10),
+     (1008,'猪八戒',4,1004,'2007-04-19','30000.00',NULL,20),
+     (1009,'罗贯中',1,NULL,'2001-11-17','50000.00',NULL,10),
+     (1010,'吴用',3,1006,'2001-09-08','15000.00','0.00',30),
+     (1011,'沙僧',4,1004,'2007-05-23','11000.00',NULL,20),
+     (1012,'李逵',4,1006,'2001-12-03','9500.00',NULL,30),
+     (1013,'小白龙',4,1004,'2001-12-03','30000.00',NULL,20),
+     (1014,'关羽',4,1007,'2002-01-23','13000.00',NULL,10);
+
+     -- 工资等级表
+     CREATE TABLE salarygrade (
+     grade INT PRIMARY KEY,
+     losalary INT,
+     hisalary INT
+     );
+
+     -- 添加5个工资等级
+     INSERT INTO salarygrade(grade,losalary,hisalary) VALUES 
+     (1,7000,12000),
+     (2,12010,14000),
+     (3,14010,20000),
+     (4,20010,30000),
+     (5,30010,99990);
+     #+END_SRC
+
+**** 解析
+     - 这里四个表
+
+**** 查询方法1
+     #+BEGIN_SRC sql
+     -- 查询所有员工信息。显示员工编号，员工姓名，工资，职务名称，职务描述
+     select  e.id 员工编号, e.ename 员工姓名, e.salary 工资,
+     j.jname 职务名称, j.description 职务描述   -- 要查询的字段
+     from emp e  -- 要查询的表
+     inner join job j  -- 要连接的表
+     on j.id = e.job_id -- 连接条件
+     #+END_SRC
+
+**** 查询方法2
+     #+BEGIN_SRC sql
+     -- 查询所有员工信息。显示员工编号，员工姓名，工资，职务名称，职务描述，部门名称，部门位置
+     select e.id 员工编号, e.ename 员工姓名, e.salary 工资,
+     j.jname 职务名称, j.description 职务描述, d.dname 部门名称, d.loc 部门位置   -- 要查询的字段
+     from emp e -- 要查询的表
+     inner join job j -- 要连接的表
+     inner join dept d -- 要连接的表
+     on j.id = e.job_id
+     and e.dept_id = d.id -- 连接条件
+     #+END_SRC
+
+**** 查询方法3
+     #+BEGIN_SRC sql
+     -- 查询所有员工信息。显示员工姓名，工资，职务名称，职务描述，部门名称，部门位置，工资等级
+     select 	 e.id 员工编号, e.ename 员工姓名, e.salary 工资,
+     j.jname 职务名称, j.description 职务描述, 
+     d.dname 部门名称, d.loc 部门位置, s.grade 工资等级  -- 要查询的字段
+     from emp e   -- 要查询的表
+     inner join job j  -- 要连接的表
+     inner join dept d  -- 要连接的表
+     inner join salarygrade s  -- 要连接的表
+     on j.id = e.job_id 
+     and e.dept_id = d.id
+     and e.salary between s.losalary and s.hisalary; -- 连接条件
+     
+     -- 连接条件数量至少 = 表的个数 - 1; 每张表都要参与条件过滤
+     #+END_SRC
+
+**** 查询方法4
+     #+BEGIN_SRC sql
+     -- 查询经理的信息。显示员工姓名，工资，职务名称，职务描述，部门名称，部门位置，工资等级
+     select e.ename 员工姓名,e.salary 工资, j.jname 职位名称,j.description 职位描述,
+     d.dname 部门名称,d.loc 部门位置, s.grade 工资等级 -- 要查询的字段
+     from emp e     -- 要查询的表
+     inner join job j 
+     inner join dept d
+     inner join salarygrade s
+     on j.id = e.job_id 
+     and e.dept_id = d.id
+     and e.salary between s.losalary and s.hisalary
+     and j.jname = '经理'; -- 连接条件
+     #+END_SRC
+
+**** 查询方法5
+     #+BEGIN_SRC sql
+     -- 查询出部门编号、部门名称、部门位置、部门人数
+     -- 按部门分组查询部门人数
+     select dept_id,count(*) total from emp group by dept_id;
+
+     select d.id 部门编号,d.dname 部门名称, d.loc 部门位置, e.total 部门人数 -- 要查询的字段
+     from (select dept_id,count(*) total from emp group by dept_id) e  -- 要查询的表
+     inner join dept d
+     on d.id = e.dept_id; -- 连接条件
+
+     -- 将内连接改为右连接，目的要查询全部部门
+     select d.id 部门编号,d.dname 部门名称, d.loc 部门位置, e.total 部门人数 -- 要查询的字段
+     from (select dept_id,count(*) total from emp group by dept_id) e  -- 要查询的表
+     right join dept d
+     on d.id = e.dept_id; -- 连接条件
+
+     -- ifnull(字段名,默认值)：如果指定字段的值为null，则使用默认值代替
+     select d.id 部门编号,d.dname 部门名称, d.loc 部门位置, ifnull(e.total,0) 部门人数 -- 要查询的字段
+     from (select dept_id,count(*) total from emp group by dept_id) e  -- 要查询的表
+     right join dept d
+     on d.id = e.dept_id; -- 连接条件
+     #+END_SRC
+
+**** 规则
+     - 1. 先确定要查询的表
+
+     - 2. 然后要查询的字段
+
+     - 3. 最后确定连接条件
+       
+**** 要求
+     - 连接条件数量：至少等于 表的个数 - 1;
+     - 连接条件：从表.外键 = 主表的.主键
+
+
+
+** 事务
+
+*** 事务概述
+
+**** 事务应用场景
+     #+BEGIN_SRC 
+     业务需要多次访问数据库， 里面有多条 SQL 语句， 多次访问数据库的操作 视作 一个整体， 
+     要么所有 SQL 语句全部执行成功， 如果其中 一条 失败， 就应该进行 『事务的回滚』，
+     所有 SQL 语句全部执行失败
+     #+END_SRC
+     
+**** 例子 汇款
+     #+BEGIN_SRC sql
+     create table account (
+     id int primary key auto_increment,
+     username varchar(20) not null unique,
+     balance double
+     );
+
+     insert into account (username, balance) values ('隔壁老王', 1500), ('老赵老婆', 500);
+
+     
+     -- 执行汇款
+     update account set balance = balance - 500 where id = 1;
+     update account set balance = balance + 500 where id = 2;
+
+     select * from account;
+     #+END_SRC
+
+**** 潜在问题
+     - 如果 隔壁老王 -500 块， 服务器崩溃了， 老赵老婆 没有 +500 ， 其实整个转账(PY交易) 就失败了
+       - 应该说 有内鬼， 终止交易
+
+*** 事务管理 - 手动提交事务
+
+**** 开启事务 语句
+     #+BEGIN_SRC sql
+     start transaction;
+
+     update account set balance = balance - 500 where id = 1;
+     update account set balance = balance + 500 where id = 2;
+     select * from account;
+     -- 常规是表没有更新， 但是我的系统不知道为啥自动更新了， 心塞
+     -- 但是 rollback 还是可以回去 开启事务 时的状态
+     #+END_SRC
+
+**** 提交事务 语句
+     #+BEGIN_SRC sql
+     commit;
+     -- 提交事务
+     #+END_SRC
+
+**** 回滚事务 语句
+     #+BEGIN_SRC sql
+     rollback;
+     -- 回滚事务
+     #+END_SRC
+**** 用法
+     - 只要不提交(commit)， 都可以回滚(rollback) 到 开启事务(start transaction) 时的状态。
+
+*** 事务管理 - 自动提交事务
+
+**** MySQL 默认开始 自动提交事务
+     #+BEGIN_SRC 
+     MySQL默认每一句SQL 语句 都是 单独的事务， 每条语句 都会自动开启一个事务， 执行完毕自动提交事务
+     MySQL默认 开始 自动提交事务
+     #+END_SRC
+     
+**** 取消自动提交事务
+     #+BEGIN_SRC sql
+     show variables like '%commit%';
+     -- like 是什么 ?  DQL.org 里面有 like 关键字讲解
+
+     +--------------------------------+--------+
+     | Variable_name                  | Value  |
+     +--------------------------------+--------+
+     | aria_group_commit              | none   |
+     | aria_group_commit_interval     | 0      |
+     | autocommit                     | ON     |
+     | binlog_commit_wait_count       | 0      |
+     | binlog_commit_wait_usec        | 100000 |
+     | innodb_commit_concurrency      | 0      |
+     | innodb_flush_log_at_trx_commit | 1      |
+     | wsrep_retry_autocommit         | 1      |
+     +--------------------------------+--------+
+
+     /*
+     | autocommit                     | ON     |
+     这句 设置 为 OFF 为关闭
+     */
+
+     set autocommit = 0;
+     -- 自动提交事务 关闭
+     
+     set autocommit = 1;
+     -- 自动提交事务 开启
+     #+END_SRC
+
+
+*** 事务原理
+
+**** 原理
+     #+BEGIN_SRC
+     有个 事务日志， 事务开启后， 每次的 操作都放在 事务日志 里， 事务日志 受到 commit 才会同步到 数据表 里
+     其他任何情况(rollback, 断开连接) 都会清空事务日志
+     
+     所以 默认开启自动提交事务， SQL 语句一执行， 就 把操作写在日志里 -> commit -> 同步到数据表
+     一气呵成， 不需要跟用户交互
+     #+END_SRC
+
+*** 回滚点
+
+**** 设置回滚点
+     #+BEGIN_SRC sql
+     savepoint 回滚点名称;
+     #+END_SRC
+
+**** 回到回滚点
+     #+BEGIN_SRC sql
+     rollback to 回滚点名称;
+     #+END_SRC
+
+**** 例子
+     #+BEGIN_SRC sql
+     select * from account;
+
+     /*
+     +----+--------------+---------+
+     | id | username     | balance |
+     +----+--------------+---------+
+     |  1 | 隔壁老王      |    1500 |
+     |  2 | 老赵老婆      |     500 |
+     +----+--------------+---------+
+     */
+
+
+     update account set balance = balance -100 where id = 1;
+     update account set balance = balance -100 where id = 1;
+     update account set balance = balance -100 where id = 1;
+     select * from account;
+
+     /*
+     +----+--------------+---------+
+     | id | username     | balance |
+     +----+--------------+---------+
+     |  1 | 隔壁老王      |    1200 |
+     |  2 | 老赵老婆      |     500 |
+     +----+--------------+---------+
+     */
+
+     savepoint a;
+
+     update account set balance = balance -100 where id = 1;
+     update account set balance = balance -100 where id = 1;
+     update account set balance = balance -100 where id = 1;
+     update account set balance = balance -100 where id = 1;
+     select * from account;
+
+     /*
+     +----+--------------+---------+
+     | id | username     | balance |
+     +----+--------------+---------+
+     |  1 | 隔壁老王      |     800 |
+     |  2 | 老赵老婆      |     500 |
+     +----+--------------+---------+
+     */
+
+     rollback to a;
+     select * from account;
+
+     /*
+     +----+--------------+---------+
+     | id | username     | balance |
+     +----+--------------+---------+
+     |  1 | 隔壁老王      |    1200 |
+     |  2 | 老赵老婆      |     500 |
+     +----+--------------+---------+
+     */
+     
+     #+END_SRC
+
+
+**** 理解
+     - 就是 save load 大法嘛。 多打 单机RPG 就好了
+
+
+*** 事务四大特性
+
+**** 叫ACID
+
+**** A (atomic)
+     - 原子性
+       - 事务中的多条SQL语句是一个整体，不可再分割
+       - 要么全部执行成功，要么全部执行失败
+
+**** C (consistency)
+     - 一致性
+       - 事务前后的数据要保持一致
+       - 比如:转账前后的总金金金额要保存一致
+
+**** I (isolation)
+     - 隔离性
+       - 一个事务的操作不不能影响另一个事务
+
+**** D (durability)
+     - 持久性
+       - 事务一旦提交则对数据库的数据影响是永久(不可逆)
+
+*** 事务隔离级别
+
+**** 并发访问内存的问题
+     - 比如你两个终端同时访问数据表
+     - 有三个问题
+       - 脏读
+       - 不可重复读
+       - 幻读
+
+**** 脏读
+     - 一个事务读取到另一个事务未提交的数据
+
+**** 不可重复读
+     - 一个事务多次读取数据结果不一样，一个事务在查询，一个事务在执行update操作
+
+**** 幻读
+     - 一个事务多次查询记录数不一致，一个事务在查询，另一个事务执行insert或delete 操作
+
+**** 解决方法
+     - 用隔离级别解决访问并发访问内存的问题
+
+**** 隔离级别
+     #+BEGIN_SRC sql
+     read uncommitted
+     read committed
+     repeatable read
+     serializable
+     #+END_SRC
+
+**** 查询全局事务隔离级别
+     #+BEGIN_SRC sql
+     select @@transaction_isolation;
+     -- or
+     select @@tx_isolation;
+     #+END_SRC
+
