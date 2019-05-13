@@ -28,6 +28,14 @@
      #+BEGIN_SRC sh
      ps -aux | grep mariadb
      #+END_SRC
+**** 修改 mariadb 默认 utf8
+     #+BEGIN_SRC sh
+     sudo vi /etc/my.cnf
+     # [mysqld]
+     # character-set-server=utf8
+     mysqladmin -u root -p var | grep -E 'character|collation' | tr -s ' '
+     #+END_SRC
+
 
 *** 进入/退出 Mariadb
 **** 启动 Mariadb
