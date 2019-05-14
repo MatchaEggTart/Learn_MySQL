@@ -1,0 +1,45 @@
+* 
+** 安装 mariadb
+
+*** 
+
+**** 
+     #+BEGIN_SRC sh
+     sudo dnf install mariadb mariadb-server mariadb-devel
+     #+END_SRC
+
+
+** 配置
+
+*** 必须要开启mariadb 才能改密码
+
+**** 开启 mariadb
+     #+BEGIN_SRC sh
+     sudo systemctl start mariadb
+     #+END_SRC
+
+*** 改密码
+
+**** 
+     #+BEGIN_SRC sh
+     mysql_secure_installation
+     #+END_SRC
+
+*** 修改 mariadb 默认 utf8
+
+**** 要见关闭 mariadb
+     #+BEGIN_SRC sh
+     systemctl stop mariadb
+     sudo vi /etc/my.cnf
+     #+END_SRC
+
+**** 进入 my.cnf 添加以后 内容
+     #+BEGIN_SRC cnf
+     [mysqld]
+     character-set-server=utf8
+     #+END_SRC
+
+**** 查看 mariadb 的字符
+     #+BEGIN_SRC sh
+     mysqladmin -u root -p var | grep -E 'character|collation' | tr -s ' '
+     #+END_SRC
